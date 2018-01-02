@@ -1,16 +1,23 @@
 #include <iostream>
 #include <random>
 #include <algorithm>
+#include <fstream>
+#include <chrono>
 
 using namespace std;
 
-int const N = 1000001;
+const int N = 1000001;
 int los[N];
 int uporz[N];
 int odwr[N];
 int a[N]; //a na której dzialaja algorytmy
-int rozmiar = 0;
+int rozmiarTablicy = 0;
+std::ofstream myFile;
+std::chrono::duration<double> rezultat;
 
+typedef void (*wskaznikNaFunkcjeBezArgumentow)();
+
+typedef void (*wskaznikNaFunkcjeDwuargumentowe)(int, int);
 
 void wstawianie();
 
@@ -22,28 +29,173 @@ void sps(int l, int p);
 
 void szybkie(int l, int p);
 
-void sprawdz(const int tablica[], int rozmiar);
-
 void przypisz(int tablicawynikowa[], const int tablica[], int rozmiar);
 
-typedef void (*wskaznikNaFunkcjeBezArgumentow)();
-
-typedef void (*wskaznikNaFunkcjeDwuargumentowe)(int, int);
+void dzialamy(int rozmiarTablicy);
 
 void sortuj(wskaznikNaFunkcjeBezArgumentow wskaznik);
 
 void sortuj(int i, int j, wskaznikNaFunkcjeDwuargumentowe wskaznik);
 
-void dzialamy(int rozmiarTablicy);
+void sprawdz(const int tablica[], int rozmiar);
+
 
 int main() {
-    //generator liczb losowych
+  int Tablice[5]{10, 100, 1000, 10000, 100000};
 
-    int Tablice[5]{10,100,1000,10000,100000};
+    myFile.open ("results.txt");
 
-    for (int i : Tablice){
-        rozmiar = i;
-        dzialamy(rozmiar);
+    for (int i : Tablice) {
+        myFile << "\n##################### Ilosc elementow: " << i << endl;
+        rozmiarTablicy = i;
+        dzialamy(rozmiarTablicy);
+    }
+
+    myFile.close();
+}
+
+void przypisz(int tablicawynikowa[], const int tablica[], int rozmiar) {
+    for (int i = 0; i < rozmiar; i++) {
+        tablicawynikowa[i] = tablica[i];
+    }
+}
+
+void dzialamy(int rozmiarTablicy) {
+    mt19937 uni;
+    uni.seed(unsigned(nullptr));
+    uniform_int_distribution<int> rand(0, 100);
+
+    // generowanie zawartosci tablicy
+    for (int i = 0; i < rozmiarTablicy; i++) {
+        los[i] = rand(uni);
+    }
+
+    //pierwsza i ostatnia komorka tablicy
+    int l = 0;
+    int p = rozmiarTablicy - 1;
+
+    //przepisywanie losowych danych do tablicy a
+    przypisz(a, los, rozmiarTablicy);
+
+    // sortowanie rosnaco
+    sort(a, a + rozmiarTablicy);
+    przypisz(uporz, a, rozmiarTablicy);
+
+    //sortowanie malejaco
+    sort(a, a + rozmiarTablicy, greater<int>());
+    przypisz(odwr, a, rozmiarTablicy);
+
+/*
+    //sprawdzanie wartosci tablic
+    cout << "\nsprawdzanie koncowe\n\n";
+    cout << "wartosci nieposortowane\n";
+    sprawdz(los, rozmiarTablicy);
+    cout << "wartosci posortowane rosnaco\n";
+    sprawdz(uporz, rozmiarTablicy);
+    cout << "wartosci posortowane malejaco\n";
+    sprawdz(odwr, rozmiarTablicy);
+*/
+
+    //obliczanie czasow wykonania algorytmu
+
+    myFile << "     @@@wstawianie@@@\n";
+    sortuj(wstawianie);
+    myFile << "\n     @@@wybieranie@@@\n";
+    sortuj(wybieranie);
+    myFile << "\n     @@@babelkowe@@@\n";
+    sortuj(babelkowe);
+    myFile << "\n     @@@sps@@@\n";
+    sortuj(l, p, sps);
+    myFile << "\n     @@@szybkie@@@\n";
+    sortuj(l, p, szybkie);
+
+}
+
+void sortuj(int i, int j, wskaznikNaFunkcjeDwuargumentowe wskaznik) {
+    bool status = false;
+    auto czasStart = std::chrono::high_resolution_clock::now();
+    auto czasKoniec = std::chrono::high_resolution_clock::now();
+
+    while(!status) {
+        przypisz(a, los, rozmiarTablicy);
+        czasStart = std::chrono::high_resolution_clock::now();
+        wskaznik(i, j);
+        czasKoniec = std::chrono::high_resolution_clock::now();
+        rezultat = czasKoniec - czasStart;
+        if(rezultat.count() != 0) {
+            status = true;
+            myFile << "1. Losowo: " << rezultat.count() << endl;
+        }
+    }
+
+    status = false;
+    while(!status) {
+        przypisz(a, uporz, rozmiarTablicy);
+        czasStart = std::chrono::high_resolution_clock::now();
+        wskaznik(i, j);
+        czasKoniec = std::chrono::high_resolution_clock::now();
+        rezultat = czasKoniec - czasStart;
+        if(rezultat.count() != 0) {
+            status = true;
+            myFile << "2. Rosnaco: " << rezultat.count() << endl;
+        }
+    }
+
+    status = false;
+    while(!status) {
+        przypisz(a, odwr, rozmiarTablicy);
+        czasStart = std::chrono::high_resolution_clock::now();
+        wskaznik(i, j);
+        czasKoniec = std::chrono::high_resolution_clock::now();
+        rezultat = czasKoniec - czasStart;
+     if(rezultat.count() != 0) {
+         status = true;
+         myFile << "3. Malejaco: " << rezultat.count() << endl;
+     }
+    }
+}
+
+void sortuj(wskaznikNaFunkcjeBezArgumentow wskaznik) {
+    bool status = false;
+    auto czasStart = std::chrono::high_resolution_clock::now();
+    auto czasKoniec = std::chrono::high_resolution_clock::now();
+
+    while(!status) {
+        przypisz(a, los, rozmiarTablicy);
+        czasStart = std::chrono::high_resolution_clock::now();
+        wskaznik();
+        czasKoniec = std::chrono::high_resolution_clock::now();
+        rezultat = czasKoniec - czasStart;
+        if(rezultat.count() != 0) {
+            status = true;
+            myFile << "1. Losowo: " << rezultat.count() << endl;
+        }
+    }
+
+    status = false;
+    while (!status) {
+        przypisz(a, uporz, rozmiarTablicy);
+        czasStart = std::chrono::high_resolution_clock::now();
+        wskaznik();
+        czasKoniec = std::chrono::high_resolution_clock::now();
+        rezultat = czasKoniec - czasStart;
+        if(rezultat.count() != 0) {
+            status = true;
+            myFile << "2. Rosnaco: " << rezultat.count() << endl;
+        }
+    }
+
+    status = false;
+    while(!status) {
+        przypisz(a, odwr, rozmiarTablicy);
+        czasStart = std::chrono::high_resolution_clock::now();
+        wskaznik();
+        czasKoniec = std::chrono::high_resolution_clock::now();
+        rezultat = czasKoniec - czasStart;
+        if(rezultat.count() != 0) {
+            status = true;
+            myFile << "3. Malejaco: " << rezultat.count() << endl;
+        }
     }
 }
 
@@ -54,15 +206,9 @@ void sprawdz(const int tablica[], int rozmiar) {
     cout << endl;
 }
 
-void przypisz(int tablicawynikowa[], const int tablica[], int rozmiar) {
-    for (int i = 0; i < rozmiar; i++) {
-        tablicawynikowa[i] = tablica[i];
-    }
-}
-
 void wstawianie() {
     int i, j, v;
-    for (i = 1; i < rozmiar; i++) {
+    for (i = 1; i < rozmiarTablicy; i++) {
         j = i;
         v = a[i];
         while ((j > 0) && (a[j - 1] > v)) {
@@ -75,9 +221,9 @@ void wstawianie() {
 
 void wybieranie() {
     int max, pomoc;
-    for (int i = 0; i < rozmiar; i++) {
+    for (int i = 0; i < rozmiarTablicy; i++) {
         max = i;
-        for (int j = i + 1; j < rozmiar; j++) {
+        for (int j = i + 1; j < rozmiarTablicy; j++) {
             if (a[j] < a[max])
                 max = j;
         }
@@ -105,7 +251,7 @@ void babelkowe() {
 }
 
 void sps(int l, int p) {
-    int pom[rozmiar];
+    int pom[rozmiarTablicy];
     int i_s, i1, i2, i;
 
     i_s = (l + p + 1) / 2;
@@ -143,74 +289,5 @@ void szybkie(int l, int p) {
     if (i < p) szybkie(i, p);
 }
 
-void sortuj(int i, int j, wskaznikNaFunkcjeDwuargumentowe wskaznik) {
-    przypisz(a, los, rozmiar);
-    wskaznik(i, j);
 
-    przypisz(a, uporz, rozmiar);
-    wskaznik(i, j);
 
-    przypisz(a, odwr, rozmiar);
-    wskaznik(i, j);
-}
-
-void sortuj(wskaznikNaFunkcjeBezArgumentow wskaznik) {
-    przypisz(a, los, rozmiar);
-    wskaznik();
-
-    przypisz(a, uporz, rozmiar);
-    wskaznik();
-
-    przypisz(a, odwr, rozmiar);
-    wskaznik();
-}
-
-void dzialamy (int rozmiarTablicy){
-    mt19937 uni;
-    uni.seed(unsigned(nullptr));
-    uniform_int_distribution<int> rand(0, 100);
-    // generowanie zawartosci tablicy
-    for (int i = 0; i < rozmiar; i++) {
-        los[i] = rand(uni);
-    }
-
-    //pierwsza i ostatnia komorka tablicy
-    int l = 0;
-    int p = rozmiar - 1;
-
-    //przepisywanie losowych danych do tablicy a
-    przypisz(a, los, rozmiar);
-
-    // sortowanie rosnaco
-    sort(a, a + rozmiar);
-    przypisz(uporz, a, rozmiar);
-
-    //sortowanie malejaco
-    sort(a, a + rozmiar, greater<int>());
-    przypisz(odwr, a, rozmiar);
-
-    /*
-    //sprawdzanie wartosci tablic
-    cout << "\nsprawdzanie koncowe\n\n";
-    cout << "wartosci nieposortowane\n";
-    sprawdz(los, n);
-    cout << "wartosci posortowane rosnaco\n";
-    sprawdz(uporz, n);
-    cout << "wartosci posortowane malejaco\n";
-    sprawdz(odwr, n);
-*/
-
-    //obliczanie czasow wykonania algorytmu
-
-    cout << "wstawianie\n";
-    sortuj(wstawianie);
-    cout << "wybieranie\n";
-    sortuj(wybieranie);
-    cout << "babelkowe\n";
-    sortuj(babelkowe);
-    cout << "sps\n";
-    sortuj(l, p, sps);
-    cout << "szybkie\n";
-    sortuj(l, p, szybkie);
-
-}
